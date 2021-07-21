@@ -1,0 +1,357 @@
+---
+title: "BathSoap"
+author: "Nhóm 20"
+date: "6/27/2021"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message= FALSE)
+```
+Thành viên :
+
+    Trương Hùng Anh- 18133001
+    
+    Nguyễn Xuân Hiệu – 18133013
+    
+    Nguyễn Tuấn Vũ – 18133064
+    
+    Trần Thị Lệ Xuân – 18133066
+
+              GVHD: Quách Đình Hoàng
+
+1. Giới thiệu chung
+
+  Giới thiệu về bài toán giải quyết
+
+  CRISA có các thị trường phân khúc truyền thống trên cơ sở nhân khẩu học của người mua. Bây giờ họ muốn phân khúc thị trường dựa trên hai bộ biến chính liên quan trực tiếp hơn đến quá trình mua hàng và lòng trung thành với thương hiệu:
+
+1.1 Hành vi mua hàng (khối lượng, tần suất, dễ bị giảm giá và lòng trung thành với thương hiệu)
+  
+1.2 Cơ sở mua (giá, đề xuất bán)
+
+  Làm như vậy sẽ cho phép CRISA có được thông tin về những thuộc tính nhân khẩu học nào có liên quan đến các hành vi mua hàng khác nhau và mức độ trung thành với thương hiệu và triển khai ngân sách khuyến mãi hiệu quả hơn.
+
+  Phân khúc thị trường tốt hơn và hiệu quả hơn sẽ cho phép khách hàng của CRISA thiết kế các chương trình khuyến mãi hiệu quả hơn về chi phí nhắm vào các phân khúc phù hợp. Do đó, nhiều chương trình khuyến mãi có thể được tung ra, mỗi chương trình nhắm mục tiêu vào các phân khúc thị trường khác nhau vào các thời điểm khác nhau trong một năm. Điều này sẽ dẫn đến việc phân bổ ngân sách khuyến mãi hiệu quả hơn cho các thị trường khác nhau. Nó cũng sẽ cho phép CRISA thiết kế các hệ thống phần thưởng khách hàng hiệu quả hơn và do đó tăng lòng trung thành với thương hiệu.
+  
+
+  Input: Các biến được sử dụng cho vấn đề:Avg..Price, Trans...Brand.Runs, No..of..Trans,No..of.Brands, Others.999, Total.Volume, Value,maxBrCd
+
+  Output: Sử dụng thuật toán K-means để xác định các nhóm hộ gia đình dữa trên các biến nhập vào?
+
+
+2. Giới thiệu tập dữ liệu
+
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra)
+library(dplyr)
+library(NbClust)
+library(magrittr)
+library(aricode)
+library(dbscan)
+library(fpc)
+soap.df <- read.csv("D:/BathSoap.csv")
+soap.df
+```
+
+1. MEM: Mã định danh duy nhất cho mỗi hộ gia đình
+2. SEC: Loại kinh tế xã hội (1 = cao, 5 = thấp)
+3. FEH: Thói quen ăn uống thực phẩm (1 = ăn chay, 2 = rau nhưng ăn trứng, 3 = không ăn chay., 0 = không được chỉ định)
+4. MT:	Ngôn ngữ mẹ đẻ (xem bảng trong trang tính) 
+5. SEX: Giới tính (Nam, nữ)
+6. AGE: Tuổi
+7. EDU:Giáo dục
+8. HS: Số lượng thành viên trong gia đình
+9. CHILD:Số trẻ em trong gia đình
+10. CS: Tivi (có/ Không)
+11. Affluence Index: Chỉ số giàu có
+12. No. of Brands: Số lượng thương hiệu đã mua
+13. Brand Runs: Số lượng trường hợp mua liên tiếp của các thương hiệu
+14. Total Volume: 
+15. No. of  Trans: Số lượng giao dịch mua hàng; Nhiều thương hiệu được mua trong một tháng được tính là các giao dịch riêng biệt
+16. Value: Tổng giá trị
+17. Trans / Brand Runs: Giao dịch trung bình trên mỗi thương hiệu.
+18. Vol/Tran :
+19. Avg. Price: Giá trị mua trung bình
+20. Pur Vol No Promo - %: Phần trăm khối lượng mua theo chương trình khuyến mãi/không khuyến mãi
+21. Pur Vol Promo 6 %: Phần trăm khối lượng mua theo Mã khuyến mãi 6
+21. Pur Vol Other Promo % : Phần trăm khối lượng mua theo các chương trình khuyến mãi khác
+23. Br. Cd. (57, 144), 55, 272, 286, 24, 481, 352,5 and 999 (others): : Phần trăm khối lượng mua của thương hiệu 
+24. Price  Cat 1 to 4 :Phần trăm khối lượng mua theo danh mục giá
+25. Proposition   Cat 5 to 15 : Phần trăm khối lượng mua theo danh mục đề xuất sản phẩm
+
+
+```{r}
+#Dùng DBSCAN để phâm cụm tập dữ liệu 
+set.seed(220)  # Setting seed
+Dbscan_cl <- dbscan(soap.df, eps = 0.01, MinPts = 5)
+Dbscan_cl
+Dbscan_cl1 <- dbscan(soap.df, eps = 0.1, MinPts = 5)
+Dbscan_cl1
+```
+- Phân cụm DBSCAN gom tất cả các điểm dữ liệu trong một cụm duy nhất. Khi các thông số đã thay đổi, tức là giá trị epsilon và điểm tối thiểu bị thay đổi, sự hình thành các cụm không hiển thị tốt kích thước phân đoạn của dữ liệu. Do đó, chúng tôi không thể xem xét mô hình này cho tập dữ liệu này.
+  
+
+```{r}
+#Chọn các đặc trưng phân tích vấn đề
+vars1.df <- select(soap.df, Avg..Price, Trans...Brand.Runs, No..of..Trans,No..of.Brands, Others.999, Total.Volume, Value,maxBrCd )
+vars1.df
+```
+
+```{r}
+#Chon k tốt nhất cho Kmeans SỬ DỤNG NbClust
+nbclust_out <- NbClust(
+  data = vars1.df,
+  distance = "euclidean",
+  min.nc = 2, # minimum number of clusters
+  max.nc = 10, # maximum number of clusters
+  method = "kmeans")
+```
+
+```{r}
+#vẽ hình thể hiện chọn K tốt nhất
+nbclust_plot <- data.frame(clusters = nbclust_out$Best.nc[1, ])
+# select only indices which select between 2 and 5 clusters
+nbclust_plot <- subset(nbclust_plot, clusters >= 2 & clusters <= 10)
+
+# create plot
+ggplot(nbclust_plot) +
+  aes(x = clusters) +
+  geom_histogram(bins = 30L, fill = "#0c4c8a") +
+  labs(x = "Number of clusters", y = "Frequency among all indices", title = "Optimal number of clusters") +
+  theme_minimal()
+```
+
+
+```{r}
+#Kmeans với K = 3
+set.seed(2)
+kmeans1.result <- kmeans(vars1.df, centers = 3,nstart = 25)
+kmeans1.result
+```
+- Chất lượng của phân vùng dựa trên chỉ số trên là 51,3%
+
+## Biểu đồ phân cụm của k-means 
+
+```{r}
+#Kmeans với k = 3
+kmeans1.result $cluster %>% table()
+p2 <- fviz_cluster(kmeans1.result, geom = "point",  data = vars1.df) + ggtitle("k = 4")
+p2
+```
+
+## Chọn k tối ưu - thuật toán K-Medoids 
+
+```{r}
+#Chọn k cho K-Medoids bằng phương pháp elbow 
+#K-Medoids
+fviz_nbclust(vars1.df, pam, method = "wss")
+```
+
+## Kết quả phân tích k-Mediods với k =3
+
+
+```{r}
+#K-Medoids với k = 3
+set.seed(1)
+#perform k-medoids clustering with k = 3 clusters
+kmed <- pam(vars1.df, k = 3)
+kmed
+```
+
+## Biểu đồ với k =3 
+
+
+```{r}
+#K-Medoids với k = 3
+p3 <- fviz_cluster(kmed,geom = "point", data = vars1.df)+ ggtitle("k = 3")
+p3
+```
+
+## So sánh 2 thuật toán 
+
+```{r}
+library(factoextra)
+#Tính Silhouette Coefficient của K-means
+ss <- silhouette(kmeans1.result$cluster, dist(vars1.df))
+# summary(ss) 
+
+fviz_silhouette(ss, print.summary = TRUE)
+#Tính Silhouette Coefficient của K-Medoids
+sss <- silhouette(kmed$cluster, dist(vars1.df))
+#summary(sss)
+
+fviz_silhouette(sss, print.summary = TRUE)
+```
+
+- Dựa vào thông số trên ta thấy phân cụm của Kmeans có thông số Silhouette Coeﬃcient  gần 1 hơn so với phân cum bằng K-Medoids nên thuật toán K-Means là thuật toán tốt hơn cho tập dữ liệu này
+
+- Silhouette coeﬀicient là trung bình của các Si. Giá trị càng gần +1 mô tả clustering càng tốt
+
+
+
+Bài toán số 2: Phân tích dựa trên Các biến mô tả cơ sở mua hàng 
+
+  Các biến được sử dụng cho quá trình này là: 
+
+      Tất cả các loại giá 
+
+      Bán đề xuất 
+  Chi tiết:
+  
+    Khối lượng mua khi không có khuyến mại, khuyến mãi 6 và các khuyến mãi khác
+
+    Sau khi vẽ biểu đồ cho tất cả các đề xuất bán và nhận thấy rằng PropCat 9, PropCat 10, PropCat 11, PropCat 13, PropCat 14 có rất ít điểm dữ liệu so với chúng.
+
+    Không quan sát thấy nhiều mô hình phân phối cho các biến này.
+    
+    => Chỉ xem xét PropCat 5-8, PropCat 12, PropCat 15.  
+
+  Biến Input: Pur.Vol.No.Promo, Pur.Vol.Promo.6, Pur.Vol.Other.Promo, Pr.Cat.1, Pr.Cat.2, Pr.Cat.3, Pr.Cat.4, PropCat.5, PropCat.6, PropCat.8, PropCat.12, PropCat.15, maxBrCd 
+  
+  Biến Output: Sử dụng thuật toán K-means để xác định các nhóm hộ gia đình dữa trên các biến nhập vào
+      
+```{r}
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra)
+library(dplyr)
+library(NbClust)
+library(magrittr)
+library(aricode)
+library(dbscan)
+library(fpc)
+soap2.df <- read.csv("D:/BathSoap.csv")
+soap2.df
+```
+
+
+```{r}
+#Chọn các đặc trưng phân tích vấn đề
+vars2.df <- select(soap2.df, Pur.Vol.No.Promo, Pur.Vol.Promo.6, Pur.Vol.Other.Promo, Pr.Cat.1, Pr.Cat.2, Pr.Cat.3, Pr.Cat.4, PropCat.5, PropCat.6, PropCat.8, PropCat.12, PropCat.15, maxBrCd )
+vars2.df
+```
+## Tìm k tối ưu trong thuật toán k-means 
+
+```{r}
+#Chon k tốt nhất cho Kmeans SỬ DỤNG NbClust
+nbclust_out2 <- NbClust(
+  data = vars2.df,
+  distance = "euclidean",
+  min.nc = 2, # minimum number of clusters
+  max.nc = 10, # maximum number of clusters
+  method = "kmeans")
+```
+## Biểu đồ thể hiện k
+
+```{r}
+#vẽ hình thể hiện chọn K tốt nhất
+nbclust_plot <- data.frame(clusters = nbclust_out2$Best.nc[1, ])
+# select only indices which select between 2 and 5 clusters
+nbclust_plot <- subset(nbclust_plot, clusters >= 2 & clusters <= 10)
+
+# create plot
+ggplot(nbclust_plot) +
+  aes(x = clusters) +
+  geom_histogram(bins = 30L, fill = "#0c4c8a") +
+  labs(x = "Number of clusters", y = "Frequency among all indices", title = "Optimal number of clusters") +
+  theme_minimal()
+```
+
+## Kết quả phân tích k-mean với k =4
+
+```{r}
+#Kmeans với K = 4
+set.seed(2)
+kmeans2.result <- kmeans(vars2.df, centers = 4,nstart = 25)
+kmeans2.result
+```
+=> Chất lượng của phân vùng dựa trên chỉ số trên là 51,3%
+
+## Biểu đồ phân cụm của k-means
+
+```{r}
+#Kmeans với k = 4
+kmeans2.result $cluster %>% table()
+p3 <- fviz_cluster(kmeans2.result, geom = "point",  data = vars2.df) + ggtitle("k = 4")
+p3
+```
+
+## Chọn k tối ưu - thuật toán K-Medoids
+
+```{r}
+#Chọn k cho K-Medoids bằng phương pháp elbow 
+#K-Medoids
+fviz_nbclust(vars2.df, pam, method = "wss")
+```
+
+## Kết quả phân tích k-Mediods với k =4
+
+
+```{r}
+#K-Medoids với k = 4
+set.seed(1)
+#perform k-medoids clustering with k = 4 clusters
+kmed <- pam(vars2.df, k = 4)
+kmed
+```
+
+## Biểu đồ với k =4 
+
+
+```{r}
+#K-Medoids với k = 4
+p3 <- fviz_cluster(kmed,geom = "point", data = vars2.df)+ ggtitle("k = 4")
+p3
+```
+
+## So sánh 2 thuật toán 
+
+```{r}
+library(factoextra)
+#Tính Silhouette Coefficient của K-means
+ss <- silhouette(kmeans2.result$cluster, dist(vars2.df))
+# summary(ss) 
+
+fviz_silhouette(ss, print.summary = TRUE)
+#Tính Silhouette Coefficient của K-Medoids
+sss <- silhouette(kmed$cluster, dist(vars2.df))
+#summary(sss)
+
+fviz_silhouette(sss, print.summary = TRUE)
+```
+
+- Dựa vào thông số trên ta thấy phân cụm của Kmeans có thông số Silhouette Coeﬃcient  gần 1 hơn so với phân cum bằng K-Medoids nên thuật toán K-Means là thuật toán tốt hơn cho tập dữ liệu này
+
+- Silhouette coeﬀicient là trung bình của các Si. Giá trị càng gần +1 mô tả clustering càng tốt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
